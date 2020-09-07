@@ -10,5 +10,8 @@ fn main() {
         .expect("Failed to read expression");
 
     println!("Hello world!");
-    parser::parse(expr);
+    match parser::parse(expr) {
+        Ok(e) => println!("Parsed expression: {}", e),
+        Err(e) => panic!("err: {}", e),
+    }
 }
