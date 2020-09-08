@@ -45,13 +45,10 @@ pub fn parse(expr: String) -> Result<Expression, ParseError> {
 // Value ← int
 // Value ← id
 
-fn parse_subexpr(expr: String, level: u32) -> Result<Expression, ParseError> {
-  let mut curr_string : String;
-  let curr_subtree: Vec<Expression>;
+// TODO: shift-reduce parser
 
-	for c in expr.chars() {
-    
+fn parse_subexpr(expr: String) -> Result<(Expression, String), ParseError> {
+  for c in expr.chars() {
   }
-  Err(ParseError {input: expr})
 }
 
