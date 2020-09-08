@@ -36,7 +36,22 @@ pub fn parse(expr: String) -> Result<Expression, ParseError> {
   // Ok(Expression::Constant(0.0))
 }
 
+// Grammar:
+// Assign ← id = Sums
+// Sums ← Sums + Products
+// Sums ← Products
+// Products ← Products * Value
+// Products ← Value
+// Value ← int
+// Value ← id
+
 fn parse_subexpr(expr: String, level: u32) -> Result<Expression, ParseError> {
-  Err(ParseError{input: expr})
+  let mut curr_string : String;
+  let curr_subtree: Vec<Expression>;
+
+	for c in expr.chars() {
+    
+  }
+  Err(ParseError {input: expr})
 }
 
