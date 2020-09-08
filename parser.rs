@@ -78,11 +78,8 @@ fn parse_leaf(expr: &str) -> ParseResult {
 fn parse_variable(mut expr: &str) -> ParseResult {
   let mut curr_str = String::new();
   while !expr.is_empty() {
-    let first_char = expr.chars().next().unwrap();
-    if first_char >= 'a' && first_char <= 'z'
-      || first_char >= 'A' && first_char <= 'Z'
-      || first_char >= '0' && first_char <= '9' {
-      curr_str.push(first_char);
+    if Regex::new(r"^[\w]").unwrap().is_match(expr) {
+      curr_str.push(expr.chars().next().unwrap());
       expr = expr.get(1..).unwrap();
     } else {
       break;
