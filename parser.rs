@@ -70,9 +70,25 @@ fn parse_leaf(expr: &str) -> ParseResult {
     if number_regex.is_match(expr) {
       parse_literal(expr)
     } else {
-      Ok((Expression::Variable(expr.to_string()), ""))
+      parse_variable(expr)
     }
   }
+}
+
+fn parse_variable(mut expr: &str) -> ParseResult {
+  let mut curr_str = String::new();
+  while !expr.is_empty() {
+    let first_char = expr.chars().next().unwrap();
+    if first_char >= 'a' && first_char <= 'z'
+      || first_char >= 'A' && first_char <= 'Z'
+      || first_char >= '0' && first_char <= '9' {
+      curr_str.push(first_char);
+      expr = expr.get(1..).unwrap();
+    } else {
+      break;
+    }
+  }
+  Ok((Expression::Variable(curr_str), expr))
 }
 
 fn parse_literal(mut expr: &str) -> ParseResult {
@@ -95,7 +111,6 @@ fn parse_literal(mut expr: &str) -> ParseResult {
 	// TODO: handle decimal points
   Ok((Expression::Constant(multiplier * num), expr))
 }
-
 
 fn parse_sum(expr: &str) -> ParseResult {
   let (mut s1, mut leftover) = parse_product(expr)?;
