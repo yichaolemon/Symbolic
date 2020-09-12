@@ -1,8 +1,9 @@
 use std::fmt;
 use regex::Regex;
+use std::ops::{Mul, Add};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
   Sum(Box<Expression>, Box<Expression>),
   Product(Box<Expression>, Box<Expression>),
@@ -18,6 +19,28 @@ impl fmt::Display for Expression {
       Expression::Constant(c) => write!(f, "{}", c),
       Expression::Variable(v) => write!(f, "{}", v),
     }
+  }
+}
+
+impl From<Expression> for Box<Expression> {
+  fn from(e: Expression) -> Self {
+    Box::new(e)
+  }
+}
+
+impl Mul<Expression> for Expression {
+  type Output = Expression;
+
+  fn mul(self, rhs: Expression) -> Self::Output {
+    Expression::Product(self.clone().into(), rhs.clone().into())
+  }
+}
+
+impl Add<Expression> for Expression {
+  type Output = Expression;
+
+  fn add(self, rhs: Expression) -> Self::Output {
+    Expression::Sum(self.into(), rhs.into())
   }
 }
 
