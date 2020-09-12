@@ -3,11 +3,11 @@ use regex::Regex;
 use std::ops::{Mul, Add};
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
   Sum(Box<Expression>, Box<Expression>),
   Product(Box<Expression>, Box<Expression>),
-  Constant(f64),
+  Constant(i32),
   Variable(String),
 }
 
@@ -108,21 +108,19 @@ fn parse_variable(mut expr: &str) -> ParseResult {
 fn parse_literal(mut expr: &str) -> ParseResult {
   let multiplier = if expr.starts_with("-") {
     expr = expr.get(1..).unwrap();
-    -1.0
-  } else {
-    1.0
-  };
-  let mut num = 0.0;
+    -1
+  } else { 1 };
+
+  let mut num = 0;
   while !expr.is_empty() {
     let first_char = expr.chars().next().unwrap();
     if first_char < '0' || first_char > '9' {
       break;
     }
-		num *= 10.0;
-    num += (first_char as u32 - '0' as u32) as f64;
+		num *= 10;
+    num += (first_char as u32 - '0' as u32)as i32;
     expr = expr.get(1..).unwrap();
   }
-	// TODO: handle decimal points
   Ok((Expression::Constant(multiplier * num), expr))
 }
 

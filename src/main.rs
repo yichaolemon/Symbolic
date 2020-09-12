@@ -1,6 +1,3 @@
-mod parser;
-mod tree_transform;
-
 use std::io;
 
 fn main() {
@@ -16,10 +13,9 @@ fn main() {
 			Ok(e) => {
 				println!("Parsed expression: {}", e);
 				for equivalence in tree_transform::get_transformations().iter() {
-					println!("applying equivalence {}", equivalence);
 					let transformed_expressions = tree_transform::transform(&e, equivalence);
 					for transformed in transformed_expressions.iter() {
-						println!("{}", transformed)
+						println!("By equivalence [{}] we get: {}", equivalence, transformed);
 					}
 				}
 			},
