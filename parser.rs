@@ -22,12 +22,6 @@ impl fmt::Display for Expression {
   }
 }
 
-impl From<Expression> for Box<Expression> {
-  fn from(e: Expression) -> Self {
-    Box::new(e)
-  }
-}
-
 impl Mul<Expression> for Expression {
   type Output = Expression;
 
