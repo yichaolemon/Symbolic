@@ -61,7 +61,7 @@ pub fn match_expression_variables<'a>(exp: &'a Expression, match_exp: &Expressio
 	}
 }
 
-pub fn apply_transform(match_exp: &Expression, assignments: &HashMap<String, &Expression>) -> Expression {
+fn apply_transform(match_exp: &Expression, assignments: &HashMap<String, &Expression>) -> Expression {
 	match match_exp {
 		Expression::Variable(s) => match assignments.get(s) {
 			Some(exp) => (**exp).clone(),
@@ -75,37 +75,47 @@ pub fn apply_transform(match_exp: &Expression, assignments: &HashMap<String, &Ex
 	}
 }
 
-pub fn transform_full_tree(exp: &Expression, equiv: &Equivalence) -> Option<Expression> {
+fn transform_full_tree(exp: &Expression, before: &Expression, after: &Expression) -> Option<Expression> {
 	let mut assignments = HashMap::new();
-	if !match_expression_variables(exp, &equiv.before, assignments.borrow_mut())
+	if !match_expression_variables(exp, before, assignments.borrow_mut())
 	{ return None }
-	Some(apply_transform(&equiv.after, &assignments))
-}
-
-pub fn transform_rec<F: FnMut(Expression)>(exp: &Expression, equiv: &Equivalence, mut add_transformed: F) {
-	match transform_full_tree(exp, equiv) {
-		Some(e) => add_transformed(e),
-		None => ()
-	}
-
-	match exp {
-		Expression::Product(a, b) => {
-			transform_rec(a, equiv, |e| add_transformed(e * b.deref().clone()));
-			transform_rec(b, equiv, |e| add_transformed(a.deref().clone() * e));
-		},
-		Expression::Sum(a, b) => {
-			transform_rec(a, equiv, |e| add_transformed(e + b.deref().clone()));
-			transform_rec(b, equiv, |e| add_transformed(a.deref().clone() + e));
-		},
-		_ => ()
-	}
+	Some(apply_transform(after, &assignments))
 }
 
 /// Given an expression, and an equivalence, outputs a list of expressions equivalent to it,
 /// that can be reached by applying the equivalence once.
 pub fn transform(exp: &Expression, equiv: &Equivalence) -> Vec<Expression> {
 	let mut transformed = Vec::new();
-	transform_rec(exp, equiv, |e| transformed.push(e));
+
+	match transform_full_tree(exp, &equiv.before, &equiv.after) {
+		Some(e) => transformed.push(e),
+		None => ()
+	}
+	// TODO: filter out duplicates
+	match transform_full_tree(exp, &equiv.after, &equiv.before) {
+		Some(e) => transformed.push(e),
+		None => ()
+	}
+
+	match exp {
+		Expression::Product(a, b) => {
+			for e in transform(a, equiv).into_iter() {
+				transformed.push(e * b.deref().clone())
+			}
+			for e in transform(b, equiv).into_iter() {
+				transformed.push(a.deref().clone() * e)
+			}
+		},
+		Expression::Sum(a, b) => {
+			for e in transform(a, equiv).into_iter() {
+				transformed.push(e + b.deref().clone())
+			}
+			for e in transform(b, equiv).into_iter() {
+				transformed.push(a.deref().clone() + e)
+			}
+		},
+		_ => ()
+	}
+
 	transformed
 }
-

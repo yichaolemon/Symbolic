@@ -5,6 +5,7 @@ use std::io;
 
 fn main() {
 	loop {
+		println!("Enter a mathematical expression");
 		let mut expr = String::new();
 
 		io::stdin()
