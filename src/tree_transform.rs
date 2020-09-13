@@ -112,8 +112,61 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			method: Some(Box::new(move |exp| exp.eval_const())),
 			method_name: "eval_const".into(),
 			..Default::default()
-		}
+		},
+		Equivalence {
+			method: Some(Box::new(move |exp| split_repeated_operation(exp))),
+			method_name: "split_repeated_op".into(),
+			..Default::default()
+		},
 	]
+}
+
+fn split_repeated_operation(exp: &Expression) -> Option<Expression> {
+	match exp {
+		// a*2 = a+a
+		Expression::Product(a, b) => {
+			let c = a.unwrap_constant()?;
+			if c == 0 { return Some(c!(0))}
+			if c < -1 {
+				let mut e = c!(-1) * b.deref().clone();
+				for _ in 0..(-c-1) {
+					e = e + c!(-1) * b.deref().clone();
+				}
+				return Some(e)
+			}
+			if c > 1 {
+				let mut e = b.deref().clone();
+				for _ in 0..(c-1) {
+					e = e + b.deref().clone();
+				}
+				return Some(e)
+			}
+			None
+		},
+
+		// a^2 = a*a
+		Expression::Power(a, b) => {
+			let d = b.unwrap_constant()?;
+			if d == 0 { return Some(c!(1)) }
+			if d < -1 {
+				let mut e = b.deref().clone() ^ c!(-1);
+				for _ in 0..(-d-1) {
+					e = e * b.deref().clone() ^ c!(-1);
+				}
+				return Some(e)
+			}
+			if d > 1 {
+				let mut e = b.deref().clone();
+				for _ in 0..(d -1) {
+					e = e * b.deref().clone();
+				}
+				return Some(e)
+			}
+			None
+		},
+
+		_ => None
+	}
 }
 
 // Returns true if exp matches the pattern of match_exp.

@@ -47,7 +47,7 @@ impl fmt::Display for Expression {
 }
 
 impl Expression {
-  fn unwrap_constant(&self) -> Option<i32> {
+  pub fn unwrap_constant(&self) -> Option<i32> {
     match self {
       Expression::Constant(c) => Some(*c),
       _ => None
