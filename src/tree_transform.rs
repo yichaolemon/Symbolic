@@ -4,17 +4,24 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::fmt;
 
+type EquivMethod = Box<dyn Fn(&Expression) -> Option<Expression>>;
+
 /// wants a data structure that encompasses code transformation, before -> after
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub struct Equivalence {
 	before: Expression,
 	after: Expression,
 	forwards_only: bool,
+	method: Option<EquivMethod>,
+	method_name: String,
 }
 
 impl fmt::Display for Equivalence {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{} = {}", self.before, self.after)
+		match self.method {
+			Some(_) => write!(f, "{}", self.method_name),
+			None => write!(f, "{} = {}", self.before, self.after),
+		}
 	}
 }
 
@@ -26,86 +33,86 @@ impl fmt::Display for Equivalence {
 // x*a + (-1)*(x*a)
 // 0
 
-
 pub fn get_transformations() -> Vec<Equivalence> {
 	vec![
 		// distributive
 		Equivalence {
 			before: expression("a*(b+c)"),
 			after: expression("a*b+a*c"),
-			forwards_only: false,
+			..Default::default()
 		},
 		// commutative
 		Equivalence {
 			before: expression("a+b"),
 			after: expression("b+a"),
-			forwards_only: false,
+			..Default::default()
 		},
 		Equivalence {
 			before: expression("a*b"),
 			after: expression("b*a"),
-			forwards_only: false,
+			..Default::default()
 		},
 		// associative
 		Equivalence {
 			before: expression("a*(b*c)"),
 			after: expression("(a*b)*c"),
-			forwards_only: false,
+			..Default::default()
 		},
 		Equivalence {
 			before: expression("a+(b+c)"),
 			after: expression("(a+b)+c"),
-			forwards_only: false,
+			..Default::default()
 		},
 		// identity
 		Equivalence {
 			before: expression("1*a"),
 			after: var!("a"),
 			forwards_only: true,
+			..Default::default()
 		},
 		Equivalence {
 			before: expression("0+a"),
 			after: var!("a"),
 			forwards_only: true,
+			..Default::default()
 		},
 		// inverse
 		Equivalence {
 			before: expression("a-a"),
 			after: c!(0),
 			forwards_only: true,
+			..Default::default()
 		},
 		// complex ops
 		Equivalence {
 			before: expression("a/a"),
 			after: c!(1),
 			forwards_only: true,
+			..Default::default()
 		},
 		Equivalence {
 			before: expression("a/b"),
 			after: expression("a*b^(-1)"),
-			forwards_only: false,
+			..Default::default()
 		},
 		Equivalence {
 			before: expression("a-b"),
 			after: expression("a+(-1)*b"),
-			forwards_only: false,
-		},
-		Equivalence {
-			before: expression("a^2"),
-			after: expression("a*a"),
-			forwards_only: false,
+			..Default::default()
 		},
 		// misc simple
 		Equivalence {
 			before: expression("a*0"),
 			after: c!(0),
 			forwards_only: true,
+			..Default::default()
 		},
+		// simplify expressions with only constants by evaluation
 		Equivalence {
-			before: expression("2*a"),
-			after: expression("a+a"),
-			forwards_only: false,
-		},
+			method: Some(Box::new(move |exp| exp.eval_const())),
+			method_name: "eval_const".into(),
+			..Default::default()
+		}
 	]
 }
 
@@ -184,14 +191,22 @@ fn transform_full_tree(exp: &Expression, before: &Expression, after: &Expression
 pub fn transform(exp: &Expression, equiv: &Equivalence) -> Vec<Expression> {
 	let mut transformed = Vec::new();
 
-	match transform_full_tree(exp, &equiv.before, &equiv.after) {
-		Some(e) => transformed.push(e),
-		None => ()
-	}
-	if !equiv.forwards_only {
-		match transform_full_tree(exp, &equiv.after, &equiv.before) {
+	match equiv.method.as_ref() {
+		Some(m) => match m(exp) {
 			Some(e) => transformed.push(e),
 			None => ()
+		}
+		None => {
+			match transform_full_tree(exp, &equiv.before, &equiv.after) {
+				Some(e) => transformed.push(e),
+				None => ()
+			}
+			if !equiv.forwards_only {
+				match transform_full_tree(exp, &equiv.after, &equiv.before) {
+					Some(e) => transformed.push(e),
+					None => ()
+				}
+			}
 		}
 	}
 

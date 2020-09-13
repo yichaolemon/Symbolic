@@ -14,6 +14,24 @@ pub enum Expression {
   Power(Box<Expression>, Box<Expression>),
 }
 
+// usage: var!("a")
+#[macro_export]
+macro_rules! var {
+  ($s:expr) => { Expression::Variable(($s).into()) }
+}
+
+// usage: c!(1)
+#[macro_export]
+macro_rules! c {
+  ($c:expr) => { Expression::Constant($c) }
+}
+
+impl Default for Expression {
+  fn default() -> Self {
+    c!(0)
+  }
+}
+
 impl fmt::Display for Expression {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
@@ -24,6 +42,47 @@ impl fmt::Display for Expression {
       Expression::Difference(e1, e2) => write!(f, "({})-({})", e1, e2),
       Expression::Quotient(e1, e2) => write!(f, "({})/({})", e1, e2),
       Expression::Power(e1, e2) => write!(f, "({})^({})", e1, e2),
+    }
+  }
+}
+
+impl Expression {
+  fn unwrap_constant(&self) -> Option<i32> {
+    match self {
+      Expression::Constant(c) => Some(*c),
+      _ => None
+    }
+  }
+
+  fn do_constant_math<F: Fn(i32, i32) -> Option<i32>>(a: &Expression, b: &Expression, math: F) -> Option<Expression> {
+    Some(Expression::Constant(math(
+      a.eval_const()?.unwrap_constant()?,
+      b.eval_const()?.unwrap_constant()?,
+    )?))
+  }
+
+  pub fn eval_const(&self) -> Option<Expression> {
+    match self {
+      Expression::Constant(_) => Some(self.clone()),
+      Expression::Variable(_) => None,
+      Expression::Sum(a, b) =>
+        Self::do_constant_math(a, b, |x, y| Some(x+y)),
+      Expression::Product(a, b) =>
+        Self::do_constant_math(a, b, |x, y| Some(x*y)),
+      Expression::Difference(a, b) =>
+        Self::do_constant_math(a, b, |x, y| Some(x-y)),
+      Expression::Quotient(a, b) =>
+        Self::do_constant_math(a, b, |x, y| if y != 0 && x % y == 0 {
+          Some(x / y)
+        } else {
+          None
+        }),
+      Expression::Power(a, b) =>
+        Self::do_constant_math(a, b, |x, y| if (x == 0 && y == 0) || y < 0 {
+          None // TODO: deal with exact roots
+        } else {
+          Some(x.pow(y as u32))
+        }),
     }
   }
 }
@@ -67,18 +126,6 @@ impl BitXor<Expression> for Expression {
   fn bitxor(self, rhs: Expression) -> Self::Output {
     Expression::Power(self.into(), rhs.into())
   }
-}
-
-// usage: var!("a")
-#[macro_export]
-macro_rules! var {
-  ($s:expr) => { Expression::Variable(($s).into()) }
-}
-
-// usage: c!(1)
-#[macro_export]
-macro_rules! c {
-  ($c:expr) => { Expression::Constant($c) }
 }
 
 #[derive(Debug)]
