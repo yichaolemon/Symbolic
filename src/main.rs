@@ -4,8 +4,6 @@ mod transformation_graph;
 
 use std::io;
 use std::rc::Rc;
-use std::ops::Deref;
-use core::fmt::Alignment::Right;
 
 fn main() {
 	loop {
@@ -20,15 +18,13 @@ fn main() {
 		println!("Parsed expression: {}", e);
 		// The graph takes ownership and persists `e`, but i can't figure out how to tell that to the compiler,
 		// so we need to clone it.
-		let mut graph = transformation_graph::create_graph(e);
+		let mut graph = transformation_graph::create_graph(Rc::clone(&e));
 		let equivalences = tree_transform::get_transformations();
 		// Ensure that all expressions have long lifetime, so their references in the graph are safe.
 		for equivalence in equivalences.iter() {
-			for transformed in tree_transform::transform(e, equivalence).into_iter() {
-				all_expressions.push(Box::new(transformed));
-				let transformed = (*all_expressions.last().unwrap()).as_ref();
+			for transformed in tree_transform::transform(e.as_ref(), equivalence).into_iter() {
 				println!("By equivalence [{}] we get: {}", equivalence, transformed);
-				graph.add_node(transformed, transformed, equivalence);
+				graph.add_node(Rc::clone(&e), Rc::new(transformed), equivalence);
 			}
 		}
 		println!("Graph:\n{}", graph)

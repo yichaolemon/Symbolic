@@ -4,22 +4,23 @@ use crate::tree_transform::Equivalence;
 use std::fmt;
 use std::fmt::Formatter;
 use std::rc::Rc;
+use std::ops::Deref;
 
 /// Build a graph, where nodes are expressions, and edges are equivalences
-struct Node<'a, 'b> {
-	exp: &'a Expression,
-	equiv_exps: Vec<(&'a Expression, &'b Equivalence, bool)>,
+struct Node<'b> {
+	exp: Rc<Expression>,
+	equiv_exps: Vec<(Rc<Expression>, &'b Equivalence, bool)>,
 }
 
-impl<'a, 'b> Node<'a, 'b> {
-	fn new(exp: &'a Expression) -> Node<'a, 'b> {
+impl<'b> Node<'b> {
+	fn new(exp: Rc<Expression>) -> Node<'b> {
 		Node {
 			exp,
 			equiv_exps: Vec::new()
 		}
 	}
 
-	fn add_equiv_exp(&mut self, exp: &'a Expression, equiv: &'b Equivalence, is_after: bool) {
+	fn add_equiv_exp(&mut self, exp: Rc<Expression>, equiv: &'b Equivalence, is_after: bool) {
 		self.equiv_exps.push((exp, equiv, is_after));
 	}
 }
@@ -29,54 +30,56 @@ impl<'a, 'b> Node<'a, 'b> {
 // The graph is just the structure.
 // It takes references to externally owned Expressions and Equivalences,
 // to avoid copying large expression trees.
-struct Graph<'a, 'b> {
-	map: HashMap<Expression, Node<'a, 'b>>,
-	root: &'a Expression,
+pub struct Graph<'b> {
+	map: HashMap<Expression, Node<'b>>,
+	root: Rc<Expression>,
 }
 
-impl<'a, 'b> Graph<'a, 'b> {
+impl<'b> Graph<'b> {
 	// before is already in the graph
-	pub fn add_node(&mut self, before: &'a Expression, after: &'a Expression, equiv: &'b Equivalence) {
-		let node_before = self.map.get_mut(before).unwrap();
+	pub fn add_node(&mut self, before: Rc<Expression>, after: Rc<Expression>, equiv: &'b Equivalence) {
+		let after_clone = after.as_ref().clone();
+		let node_before = self.map.get_mut(before.as_ref()).unwrap();
 
-		let mut node_after = Node::new(&after);
+		let mut node_after = Node::new(Rc::clone(&after));
 		node_after.add_equiv_exp(before, equiv, false);
-		node_before.add_equiv_exp(&after, equiv, true);
-		self.map.insert(after.clone(), node_after);
+		node_before.add_equiv_exp(after, equiv, true);
+		self.map.insert(after_clone, node_after);
 	}
 
-	fn bfs<E, F: Fn(&Node) -> Result<(), E>>(&self, f: F) -> Result<(), E> {
+	fn bfs<E, F: FnMut(&Node) -> Result<(), E>>(&self, mut f: F) -> Result<(), E> {
 		let mut visited_set = HashSet::new();
 		let mut queue = VecDeque::new();
-		let add_to_queue = |e| if !visited_set.contains(e) {
-			visited_set.insert(e);
-			queue.push_back(e)
-		};
-		add_to_queue(self.root);
+		visited_set.insert(Rc::clone(&self.root));
+		queue.push_back(Rc::clone(&self.root));
 		while !queue.is_empty() {
 			let exp = queue.pop_front().unwrap();
-			let node = self.map.get(exp).unwrap();
+			let node = self.map.get(exp.as_ref()).unwrap();
 			f(node)?;
-			for (equiv_exp, _, _) in node.equiv_exps.into_iter() {
-				add_to_queue(equiv_exp);
+			for (equiv_exp, _, _) in node.equiv_exps.iter() {
+				if !visited_set.contains(equiv_exp.as_ref()) {
+					visited_set.insert(Rc::clone(&equiv_exp));
+					queue.push_back(Rc::clone(&equiv_exp));
+				}
 			}
 		};
 		Ok(())
 	}
 }
 
-impl fmt::Display for Graph<'_, '_> {
+impl fmt::Display for Graph<'_> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
 		self.bfs(|n| write!(f, "{}\n", n.exp))
 	}
 }
 
-pub fn create_graph<'a, 'b>(root: Rc<Expression>) -> Graph<'a, 'b> {
+pub fn create_graph<'b>(root: Rc<Expression>) -> Graph<'b> {
 	let mut map = HashMap::new();
+	let root_clone = root.deref().clone();
 	let node = Node {
-		exp: root,
+		exp: Rc::clone(&root),
 		equiv_exps: Vec::new()
 	};
-	map.insert(root.clone(), node);
+	map.insert(root_clone, node);
 	Graph { map, root }
 }
