@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 
 // completely arbitrary
 fn max_measure(min_measure: i32) -> i32 {
-	return min_measure * 2 + 4;
+	return min_measure * 2 + 3;
 }
 
 fn main() {
@@ -32,8 +32,13 @@ fn main() {
 		let equivalences = tree_transform::get_transformations();
 		let mut to_transform = VecDeque::new();
 		to_transform.push_back((Rc::clone(&root_exp), 0));
+		let mut prev_depth = 0;
 		while !to_transform.is_empty() {
 			let (e, depth) = to_transform.pop_front().unwrap();
+			if depth > prev_depth {
+				println!("Reached depth {} of transformations", depth);
+				prev_depth = depth;
+			}
 			for equivalence in equivalences.iter() {
 				for transformed in tree_transform::transform(e.as_ref(), equivalence).into_iter() {
 					// measure transformed to make sure it does not stray too far from root_exp

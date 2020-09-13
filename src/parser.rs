@@ -1,23 +1,29 @@
 use std::fmt;
 use regex::Regex;
-use std::ops::{Mul, Add};
+use std::ops::{Mul, Add, Sub, Div, BitXor};
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
-  Sum(Box<Expression>, Box<Expression>),
-  Product(Box<Expression>, Box<Expression>),
   Constant(i32),
   Variable(String),
+  Sum(Box<Expression>, Box<Expression>),
+  Product(Box<Expression>, Box<Expression>),
+  Difference(Box<Expression>, Box<Expression>),
+  Quotient(Box<Expression>, Box<Expression>),
+  Power(Box<Expression>, Box<Expression>),
 }
 
 impl fmt::Display for Expression {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      Expression::Sum(e1, e2) => write!(f, "({})+({})", e1, e2),
-      Expression::Product(e1, e2) => write!(f, "({})*({})", e1, e2),
       Expression::Constant(c) => write!(f, "{}", c),
       Expression::Variable(v) => write!(f, "{}", v),
+      Expression::Sum(e1, e2) => write!(f, "({})+({})", e1, e2),
+      Expression::Product(e1, e2) => write!(f, "({})*({})", e1, e2),
+      Expression::Difference(e1, e2) => write!(f, "({})-({})", e1, e2),
+      Expression::Quotient(e1, e2) => write!(f, "({})/({})", e1, e2),
+      Expression::Power(e1, e2) => write!(f, "({})^({})", e1, e2),
     }
   }
 }
@@ -35,6 +41,31 @@ impl Add<Expression> for Expression {
 
   fn add(self, rhs: Expression) -> Self::Output {
     Expression::Sum(self.into(), rhs.into())
+  }
+}
+
+impl Sub<Expression> for Expression {
+  type Output = Expression;
+
+  fn sub(self, rhs: Expression) -> Self::Output {
+    Expression::Difference(self.into(), rhs.into())
+  }
+}
+
+impl Div<Expression> for Expression {
+  type Output = Expression;
+
+  fn div(self, rhs: Expression) -> Self::Output {
+    Expression::Quotient(self.into(), rhs.into())
+  }
+}
+
+// abuse notation. it deserves it.
+impl BitXor<Expression> for Expression {
+  type Output = Expression;
+
+  fn bitxor(self, rhs: Expression) -> Self::Output {
+    Expression::Power(self.into(), rhs.into())
   }
 }
 
@@ -57,15 +88,6 @@ pub fn parse(expr: &str) -> Result<Expression, ParseError> {
     Err(ParseError{msg: format!("expected end of expression. remaining to parse: '{}'", leftover)})
   }
 }
-
-// Grammar:
-// Assign ← id = Sums
-// Sums ← Sums + Products
-// Sums ← Products
-// Products ← Products * Value
-// Products ← Value
-// Value ← int
-// Value ← id
 
 // TODO: shift-reduce parser
 
@@ -118,7 +140,7 @@ fn parse_literal(mut expr: &str) -> ParseResult {
       break;
     }
 		num *= 10;
-    num += (first_char as u32 - '0' as u32)as i32;
+    num += first_char as i32 - '0' as i32;
     expr = expr.get(1..).unwrap();
   }
   Ok((Expression::Constant(multiplier * num), expr))
@@ -126,22 +148,38 @@ fn parse_literal(mut expr: &str) -> ParseResult {
 
 fn parse_sum(expr: &str) -> ParseResult {
   let (mut s1, mut leftover) = parse_product(expr)?;
-  while leftover.starts_with("+") {
+  while leftover.starts_with("+") || leftover.starts_with("-") {
 		let (s2, leftover2) = parse_product(leftover.get(1..).unwrap())?;
-    s1 = Expression::Sum(Box::new(s1), Box::new(s2));
+    if leftover.starts_with("+") {
+      s1 = Expression::Sum(s1.into(), s2.into());
+    } else {
+      s1 = Expression::Difference(s1.into(), s2.into());
+    }
     leftover = leftover2;
   }
   Ok((s1, leftover))
 }
 
-// TODO: consider having all of these functions take in a &str. is that more efficient?
 fn parse_product(expr: &str) -> ParseResult {
-  let (mut s1, mut leftover) = parse_leaf(expr)?;
-  while leftover.starts_with("*") {
-    let (s2, leftover2) = parse_leaf(leftover.get(1..).unwrap())?;
-    s1 = Expression::Product(Box::new(s1), Box::new(s2));
+  let (mut s1, mut leftover) = parse_power(expr)?;
+  while leftover.starts_with("*") || leftover.starts_with("/") {
+    let (s2, leftover2) = parse_power(leftover.get(1..).unwrap())?;
+    if leftover.starts_with("*") {
+      s1 = Expression::Product(s1.into(), s2.into());
+    } else {
+      s1 = Expression::Quotient(s1.into(), s2.into());
+    }
     leftover = leftover2;
   }
   Ok((s1, leftover))
 }
 
+fn parse_power(expr: &str) -> ParseResult {
+  let (mut s1, mut leftover) = parse_leaf(expr)?;
+  while leftover.starts_with("^") {
+    let (s2, leftover2) = parse_leaf(leftover.get(1..).unwrap())?;
+    s1 = Expression::Power(s1.into(), s2.into());
+    leftover = leftover2;
+  }
+  Ok((s1, leftover))
+}

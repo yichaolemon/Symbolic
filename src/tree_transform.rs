@@ -68,20 +68,38 @@ pub fn get_transformations() -> Vec<Equivalence> {
 		},
 		// inverse
 		Equivalence {
-			before: a.clone() + neg_one * a.clone(),
+			before: a.clone() + neg_one.clone() * a.clone(),
 			after: zero.clone()
 		},
+		// complex ops
+		Equivalence {
+			before: a.clone() / a.clone(),
+			after: one.clone()
+		},
+		Equivalence {
+			before: a.clone() / b.clone(),
+			after: a.clone() * (b.clone() ^ neg_one.clone())
+		},
+		Equivalence {
+			before: a.clone() - b.clone(),
+			after: a.clone() + neg_one.clone() * b.clone()
+		},
+		Equivalence {
+			before: a.clone() ^ Expression::Constant(2),
+			after: a.clone() * a.clone()
+		},
+		// misc simple
 		Equivalence {
 			before: a.clone() * zero.clone(),
 			after: zero.clone()
-		}
+		},
 	]
 }
 
 // Returns true if exp matches the pattern of match_exp.
 pub fn match_expression_variables<'a>(exp: &'a Expression, match_exp: &Expression, assignments: &mut HashMap<String, &'a Expression>)
 																	-> bool {
-	// exp = 1 + 2, match_exp = a + b, etc
+	// e.g. exp = 1 + 2, match_exp = a + b
 	match match_exp {
 		Expression::Variable(s) => match assignments.get(s) {
 			Some(assignment) => (**assignment) == *exp,
@@ -99,7 +117,25 @@ pub fn match_expression_variables<'a>(exp: &'a Expression, match_exp: &Expressio
 				Expression::Product(c, d) =>
 					match_expression_variables(c, a, assignments) && match_expression_variables(d, b, assignments),
 				_ => false
-			}
+			},
+		Expression::Difference(a, b) =>
+			match exp {
+				Expression::Difference(c, d) =>
+					match_expression_variables(c, a, assignments) && match_expression_variables(d, b, assignments),
+				_ => false
+			},
+		Expression::Quotient(a, b) =>
+			match exp {
+				Expression::Quotient(c, d) =>
+					match_expression_variables(c, a, assignments) && match_expression_variables(d, b, assignments),
+				_ => false
+			},
+		Expression::Power(a, b) =>
+			match exp {
+				Expression::Power(c, d) =>
+					match_expression_variables(c, a, assignments) && match_expression_variables(d, b, assignments),
+				_ => false
+			},
 	}
 }
 
@@ -113,7 +149,13 @@ fn apply_transform(match_exp: &Expression, assignments: &HashMap<String, &Expres
 		Expression::Sum(a, b) =>
 			Expression::Sum(apply_transform(a, assignments).into(), apply_transform(b, assignments).into()),
 		Expression::Product(c, d) =>
-			Expression::Product(apply_transform(c, assignments).into(), apply_transform(d, assignments).into())
+			Expression::Product(apply_transform(c, assignments).into(), apply_transform(d, assignments).into()),
+		Expression::Difference(c, d) =>
+			Expression::Difference(apply_transform(c, assignments).into(), apply_transform(d, assignments).into()),
+		Expression::Quotient(c, d) =>
+			Expression::Quotient(apply_transform(c, assignments).into(), apply_transform(d, assignments).into()),
+		Expression::Power(c, d) =>
+			Expression::Power(apply_transform(c, assignments).into(), apply_transform(d, assignments).into()),
 	}
 }
 
@@ -140,6 +182,8 @@ pub fn transform(exp: &Expression, equiv: &Equivalence) -> Vec<Expression> {
 	}
 
 	match exp {
+		Expression::Constant(_) => (),
+		Expression::Variable(_) => (),
 		Expression::Product(a, b) => {
 			for e in transform(a, equiv).into_iter() {
 				transformed.push(e * b.deref().clone())
@@ -156,7 +200,30 @@ pub fn transform(exp: &Expression, equiv: &Equivalence) -> Vec<Expression> {
 				transformed.push(a.deref().clone() + e)
 			}
 		},
-		_ => ()
+		Expression::Difference(a, b) => {
+			for e in transform(a, equiv).into_iter() {
+				transformed.push(e - b.deref().clone())
+			}
+			for e in transform(b, equiv).into_iter() {
+				transformed.push(a.deref().clone() - e)
+			}
+		},
+		Expression::Quotient(a, b) => {
+			for e in transform(a, equiv).into_iter() {
+				transformed.push(e / b.deref().clone())
+			}
+			for e in transform(b, equiv).into_iter() {
+				transformed.push(a.deref().clone() / e)
+			}
+		},
+		Expression::Power(a, b) => {
+			for e in transform(a, equiv).into_iter() {
+				transformed.push(e ^ b.deref().clone())
+			}
+			for e in transform(b, equiv).into_iter() {
+				transformed.push(a.deref().clone() ^ e)
+			}
+		},
 	}
 
 	transformed
