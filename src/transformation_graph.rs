@@ -37,14 +37,23 @@ pub struct Graph<'b> {
 
 impl<'b> Graph<'b> {
 	// before is already in the graph
-	pub fn add_node(&mut self, before: Rc<Expression>, after: Rc<Expression>, equiv: &'b Equivalence) {
+	// if after is already in the graph, we still add the edges but return false.
+	pub fn add_node(&mut self, before: Rc<Expression>, after: Rc<Expression>, equiv: &'b Equivalence) -> bool {
 		let after_clone = after.as_ref().clone();
-		let node_before = self.map.get_mut(before.as_ref()).unwrap();
 
-		let mut node_after = Node::new(Rc::clone(&after));
+		let node_before = self.map.get_mut(before.as_ref()).unwrap();
+		node_before.add_equiv_exp(Rc::clone(&after), equiv, true);
+
+		let (node_after, is_new) = match self.map.get_mut(after.as_ref()) {
+			Some(node_after) => (node_after, false),
+			None => {
+				let node_after = Node::new(Rc::clone(&after));
+				self.map.insert(after_clone, node_after);
+				(self.map.get_mut(after.as_ref()).unwrap(), true)
+			},
+		};
 		node_after.add_equiv_exp(before, equiv, false);
-		node_before.add_equiv_exp(after, equiv, true);
-		self.map.insert(after_clone, node_after);
+		is_new
 	}
 
 	fn bfs<E, F: FnMut(&Node) -> Result<(), E>>(&self, mut f: F) -> Result<(), E> {

@@ -16,7 +16,7 @@ impl fmt::Display for Equivalence {
 	}
 }
 
-pub fn get_transformations() -> [Equivalence; 4] {
+pub fn get_transformations() -> [Equivalence; 5] {
 	let a = Expression::Variable("a".into());
 	let b = Expression::Variable("b".into());
 	let c = Expression::Variable("c".into());
@@ -36,6 +36,10 @@ pub fn get_transformations() -> [Equivalence; 4] {
 		Equivalence {
 			before: a.clone() * (b.clone() * c.clone()),
 			after: (a.clone() * b.clone()) * c.clone()
+		},
+		Equivalence {
+			before: a.clone() + (b.clone() + c.clone()),
+			after: (a.clone() + b.clone()) + c.clone()
 		},
 	]
 }

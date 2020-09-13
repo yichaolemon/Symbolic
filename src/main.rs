@@ -4,6 +4,7 @@ mod transformation_graph;
 
 use std::io;
 use std::rc::Rc;
+use std::collections::VecDeque;
 
 fn main() {
 	loop {
@@ -20,11 +21,18 @@ fn main() {
 		// so we need to clone it.
 		let mut graph = transformation_graph::create_graph(Rc::clone(&e));
 		let equivalences = tree_transform::get_transformations();
-		// Ensure that all expressions have long lifetime, so their references in the graph are safe.
-		for equivalence in equivalences.iter() {
-			for transformed in tree_transform::transform(e.as_ref(), equivalence).into_iter() {
-				println!("By equivalence [{}] we get: {}", equivalence, transformed);
-				graph.add_node(Rc::clone(&e), Rc::new(transformed), equivalence);
+		let mut to_transform = VecDeque::new();
+		to_transform.push_back(e);
+		while !to_transform.is_empty() {
+			let e = to_transform.pop_front().unwrap();
+			for equivalence in equivalences.iter() {
+				for transformed in tree_transform::transform(e.as_ref(), equivalence).into_iter() {
+					let transformed = Rc::new(transformed);
+					println!("By equivalence [{}] we get: {}", equivalence, transformed);
+					if graph.add_node(Rc::clone(&e), Rc::clone(&transformed), equivalence) {
+						to_transform.push_back(transformed);
+					}
+				}
 			}
 		}
 		println!("Graph:\n{}", graph)
