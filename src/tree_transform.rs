@@ -1,4 +1,4 @@
-use crate::parser::Expression;
+use crate::{var, c, parser::{Expression}};
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -28,83 +28,77 @@ impl fmt::Display for Equivalence {
 
 
 pub fn get_transformations() -> Vec<Equivalence> {
-	let a = Expression::Variable("a".into());
-	let b = Expression::Variable("b".into());
-	let c = Expression::Variable("c".into());
-	let zero = Expression::Constant(0);
-	let one = Expression::Constant(1);
-	let neg_one = Expression::Constant(-1);
 	vec![
 		// distributive
 		Equivalence {
-			before: a.clone() * (b.clone() + c.clone()),
-			after: a.clone() * b.clone() + a.clone() * c.clone(),
+			before: var!("a") * (var!("b") + var!("c")),
+			after: var!("a") * var!("b") + var!("a") * var!("c"),
 			forwards_only: false,
 		},
 		// commutative
 		Equivalence {
-			before: a.clone() + b.clone(),
-			after: b.clone() + a.clone(),
+			before: var!("a") + var!("b"),
+			after: var!("b") + var!("a"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: a.clone() * b.clone(),
-			after: b.clone() * a.clone(),
+			before: var!("a") * var!("b"),
+			after: var!("b") * var!("a"),
 			forwards_only: false,
 		},
 		// associative
 		Equivalence {
-			before: a.clone() * (b.clone() * c.clone()),
-			after: (a.clone() * b.clone()) * c.clone(),
+			before: var!("a") * (var!("b") * var!("c")),
+			after: (var!("a") * var!("b")) * var!("c"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: a.clone() + (b.clone() + c.clone()),
-			after: (a.clone() + b.clone()) + c.clone(),
+			before: var!("a") + (var!("b") + var!("c")),
+			after: (var!("a") + var!("b")) + var!("c"),
 			forwards_only: false,
 		},
 		// identity
 		Equivalence {
-			before: one.clone() * a.clone(),
-			after: a.clone(),
+			before: c!(1) * var!("a"),
+			after: var!("a"),
 			forwards_only: true,
 		},
 		Equivalence {
-			before: zero.clone() + a.clone(),
-			after: a.clone(),
+			before: c!(0) + var!("a"),
+			after: var!("a"),
 			forwards_only: true,
 		},
 		// inverse
 		Equivalence {
-			before: a.clone() + neg_one.clone() * a.clone(),
-			after: zero.clone(),
+			before: var!("a") + c!(-1) * var!("a"),
+			after: c!(0),
 			forwards_only: true,
 		},
 		// complex ops
 		Equivalence {
-			before: a.clone() / a.clone(),
-			after: one.clone(),
+			before: var!("a") / var!("a"),
+			after: c!(1),
 			forwards_only: true,
 		},
 		Equivalence {
-			before: a.clone() / b.clone(),
-			after: a.clone() * (b.clone() ^ neg_one.clone()),
+			before: var!("a") / var!("b"),
+			after: var!("a") * (var!("b") ^ c!(-1)),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: a.clone() - b.clone(),
-			after: a.clone() + neg_one.clone() * b.clone(),
+			before: var!("a") - var!("b"),
+			after: var!("a") + c!(-1) * var!("b"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: a.clone() ^ Expression::Constant(2),
-			after: a.clone() * a.clone(),
+			before: var!("a") ^ c!(2),
+			after: var!("a") * var!("a"),
 			forwards_only: false,
 		},
 		// misc simple
 		Equivalence {
-			before: a.clone() * zero.clone(),
-			after: zero.clone(),
+			before: var!("a") * c!(0),
+			after: c!(0),
 			forwards_only: true,
 		},
 	]

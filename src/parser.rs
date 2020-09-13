@@ -69,6 +69,18 @@ impl BitXor<Expression> for Expression {
   }
 }
 
+// usage: var!("a")
+#[macro_export]
+macro_rules! var {
+  ($s:expr) => { Expression::Variable(($s).into()) }
+}
+
+// usage: c!(1)
+#[macro_export]
+macro_rules! c {
+  ($c:expr) => { Expression::Constant($c) }
+}
+
 #[derive(Debug)]
 pub struct ParseError {
   msg: String,
