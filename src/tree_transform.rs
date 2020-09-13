@@ -9,6 +9,7 @@ use std::fmt;
 pub struct Equivalence {
 	before: Expression,
 	after: Expression,
+	forwards_only: bool,
 }
 
 impl fmt::Display for Equivalence {
@@ -37,61 +38,74 @@ pub fn get_transformations() -> Vec<Equivalence> {
 		// distributive
 		Equivalence {
 			before: a.clone() * (b.clone() + c.clone()),
-			after: a.clone() * b.clone() + a.clone() * c.clone()
+			after: a.clone() * b.clone() + a.clone() * c.clone(),
+			forwards_only: false,
 		},
 		// commutative
 		Equivalence {
 			before: a.clone() + b.clone(),
-			after: b.clone() + a.clone()
+			after: b.clone() + a.clone(),
+			forwards_only: false,
 		},
 		Equivalence {
 			before: a.clone() * b.clone(),
-			after: b.clone() * a.clone()
+			after: b.clone() * a.clone(),
+			forwards_only: false,
 		},
 		// associative
 		Equivalence {
 			before: a.clone() * (b.clone() * c.clone()),
-			after: (a.clone() * b.clone()) * c.clone()
+			after: (a.clone() * b.clone()) * c.clone(),
+			forwards_only: false,
 		},
 		Equivalence {
 			before: a.clone() + (b.clone() + c.clone()),
-			after: (a.clone() + b.clone()) + c.clone()
+			after: (a.clone() + b.clone()) + c.clone(),
+			forwards_only: false,
 		},
 		// identity
 		Equivalence {
 			before: one.clone() * a.clone(),
-			after: a.clone()
+			after: a.clone(),
+			forwards_only: true,
 		},
 		Equivalence {
 			before: zero.clone() + a.clone(),
 			after: a.clone(),
+			forwards_only: true,
 		},
 		// inverse
 		Equivalence {
 			before: a.clone() + neg_one.clone() * a.clone(),
-			after: zero.clone()
+			after: zero.clone(),
+			forwards_only: true,
 		},
 		// complex ops
 		Equivalence {
 			before: a.clone() / a.clone(),
-			after: one.clone()
+			after: one.clone(),
+			forwards_only: true,
 		},
 		Equivalence {
 			before: a.clone() / b.clone(),
-			after: a.clone() * (b.clone() ^ neg_one.clone())
+			after: a.clone() * (b.clone() ^ neg_one.clone()),
+			forwards_only: false,
 		},
 		Equivalence {
 			before: a.clone() - b.clone(),
-			after: a.clone() + neg_one.clone() * b.clone()
+			after: a.clone() + neg_one.clone() * b.clone(),
+			forwards_only: false,
 		},
 		Equivalence {
 			before: a.clone() ^ Expression::Constant(2),
-			after: a.clone() * a.clone()
+			after: a.clone() * a.clone(),
+			forwards_only: false,
 		},
 		// misc simple
 		Equivalence {
 			before: a.clone() * zero.clone(),
-			after: zero.clone()
+			after: zero.clone(),
+			forwards_only: true,
 		},
 	]
 }
@@ -175,10 +189,11 @@ pub fn transform(exp: &Expression, equiv: &Equivalence) -> Vec<Expression> {
 		Some(e) => transformed.push(e),
 		None => ()
 	}
-	// TODO: filter out duplicates
-	match transform_full_tree(exp, &equiv.after, &equiv.before) {
-		Some(e) => transformed.push(e),
-		None => ()
+	if !equiv.forwards_only {
+		match transform_full_tree(exp, &equiv.after, &equiv.before) {
+			Some(e) => transformed.push(e),
+			None => ()
+		}
 	}
 
 	match exp {
