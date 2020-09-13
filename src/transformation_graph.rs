@@ -3,6 +3,7 @@ use std::collections::{HashMap, VecDeque, HashSet};
 use crate::tree_transform::Equivalence;
 use std::fmt;
 use std::fmt::Formatter;
+use std::rc::Rc;
 
 /// Build a graph, where nodes are expressions, and edges are equivalences
 struct Node<'a, 'b> {
@@ -23,6 +24,11 @@ impl<'a, 'b> Node<'a, 'b> {
 	}
 }
 
+// 'b is lifetime of equivalences.
+// Expressions are stored by
+// The graph is just the structure.
+// It takes references to externally owned Expressions and Equivalences,
+// to avoid copying large expression trees.
 struct Graph<'a, 'b> {
 	map: HashMap<Expression, Node<'a, 'b>>,
 	root: &'a Expression,
@@ -30,13 +36,13 @@ struct Graph<'a, 'b> {
 
 impl<'a, 'b> Graph<'a, 'b> {
 	// before is already in the graph
-	pub fn add_node(&mut self, before: &'a Expression, after: Expression, equiv: &'b Equivalence) {
+	pub fn add_node(&mut self, before: &'a Expression, after: &'a Expression, equiv: &'b Equivalence) {
 		let node_before = self.map.get_mut(before).unwrap();
 
 		let mut node_after = Node::new(&after);
 		node_after.add_equiv_exp(before, equiv, false);
 		node_before.add_equiv_exp(&after, equiv, true);
-		self.map.insert(after, node_after);
+		self.map.insert(after.clone(), node_after);
 	}
 
 	fn bfs<E, F: Fn(&Node) -> Result<(), E>>(&self, f: F) -> Result<(), E> {
@@ -65,12 +71,12 @@ impl fmt::Display for Graph<'_, '_> {
 	}
 }
 
-pub fn create_graph<'a, 'b>(root: Expression) -> Graph<'a, 'b> {
+pub fn create_graph<'a, 'b>(root: Rc<Expression>) -> Graph<'a, 'b> {
 	let mut map = HashMap::new();
 	let node = Node {
-		exp: &root,
+		exp: root,
 		equiv_exps: Vec::new()
 	};
-	map.insert(root, node);
-	Graph { map, root: &root}
+	map.insert(root.clone(), node);
+	Graph { map, root }
 }
