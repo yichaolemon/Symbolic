@@ -5,6 +5,7 @@ use std::ops::Deref;
 use std::fmt;
 
 /// wants a data structure that encompasses code transformation, before -> after
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Equivalence {
 	before: Expression,
 	after: Expression,
@@ -16,11 +17,16 @@ impl fmt::Display for Equivalence {
 	}
 }
 
-pub fn get_transformations() -> [Equivalence; 8] {
+// ((0)*(4))+((1)*(0))
+
+pub fn get_transformations() -> Vec<Equivalence> {
 	let a = Expression::Variable("a".into());
 	let b = Expression::Variable("b".into());
 	let c = Expression::Variable("c".into());
-	[
+	let zero = Expression::Constant(0);
+	let one = Expression::Constant(1);
+	let neg_one = Expression::Constant(-1);
+	vec![
 		// distributive
 		Equivalence {
 			before: a.clone() * (b.clone() + c.clone()),
@@ -46,18 +52,22 @@ pub fn get_transformations() -> [Equivalence; 8] {
 		},
 		// identity
 		Equivalence {
-			before: Expression::Constant(1) * a.clone(),
+			before: one.clone() * a.clone(),
 			after: a.clone()
 		},
 		Equivalence {
-			before: Expression::Constant(0) + a.clone(),
+			before: zero.clone() + a.clone(),
 			after: a.clone(),
 		},
 		// inverse
 		Equivalence {
-			before: a.clone() + Expression::Constant(-1) * a.clone(),
-			after: Expression::Constant(0)
-		}
+			before: a.clone() + neg_one * a.clone(),
+			after: zero.clone()
+		},
+		// Equivalence {
+		// 	before: a.clone() * zero.clone(),
+		// 	after: a.clone()
+		// }
 	]
 }
 

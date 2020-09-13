@@ -20,8 +20,8 @@ impl<'b> Node<'b> {
 		}
 	}
 
-	fn add_equiv_exp(&mut self, exp: Rc<Expression>, equiv: &'b Equivalence, is_after: bool) {
-		self.equiv_exps.push((exp, equiv, is_after));
+	fn add_equiv_exp(&mut self, exp: Rc<Expression>, equiv: &'b Equivalence, reverse: bool) {
+		self.equiv_exps.push((exp, equiv, reverse));
 	}
 }
 
@@ -40,7 +40,7 @@ impl<'b> Graph<'b> {
 	// if after is already in the graph, we still add the edges but return false.
 	pub fn add_node(&mut self, before: Rc<Expression>, after: Rc<Expression>, equiv: &'b Equivalence) -> bool {
 		let node_before = self.map.get_mut(before.as_ref()).unwrap();
-		node_before.add_equiv_exp(Rc::clone(&after), equiv, true);
+		node_before.add_equiv_exp(Rc::clone(&after), equiv, false);
 
 		let (node_after, is_new) = match self.map.get_mut(after.as_ref()) {
 			Some(node_after) => (node_after, false),
@@ -50,23 +50,23 @@ impl<'b> Graph<'b> {
 				(self.map.get_mut(after.as_ref()).unwrap(), true)
 			},
 		};
-		node_after.add_equiv_exp(before, equiv, false);
+		node_after.add_equiv_exp(before, equiv, true);
 		is_new
 	}
 
-	fn bfs<E, F: FnMut(&Node) -> Result<(), E>>(&self, mut f: F) -> Result<(), E> {
+	fn bfs<E, F: FnMut(&Node, i32, &Expression) -> Result<(), E>>(&self, mut f: F) -> Result<(), E> {
 		let mut visited_set = HashSet::new();
 		let mut queue = VecDeque::new();
 		visited_set.insert(Rc::clone(&self.root));
-		queue.push_back(Rc::clone(&self.root));
+		queue.push_back((Rc::clone(&self.root), 0, Rc::clone(&self.root)));
 		while !queue.is_empty() {
-			let exp = queue.pop_front().unwrap();
+			let (exp, depth, backedge) = queue.pop_front().unwrap();
 			let node = self.map.get(exp.as_ref()).unwrap();
-			f(node)?;
+			f(node, depth, backedge.as_ref())?;
 			for (equiv_exp, _, _) in node.equiv_exps.iter() {
 				if !visited_set.contains(equiv_exp) {
 					visited_set.insert(Rc::clone(equiv_exp));
-					queue.push_back(Rc::clone(equiv_exp));
+					queue.push_back((Rc::clone(equiv_exp), depth+1, Rc::clone(&exp)));
 				}
 			}
 		};
@@ -76,7 +76,18 @@ impl<'b> Graph<'b> {
 
 impl fmt::Display for Graph<'_> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		self.bfs(|n| write!(f, "{}\n", n.exp))
+		self.bfs(|n, d, backedge| {
+			let mut relevant_edge: Option<(&Equivalence, bool)> = None;
+			for (e, equiv, reverse) in n.equiv_exps.iter() {
+				if (**e) == *backedge {
+					relevant_edge = Some((equiv, *reverse));
+				}
+			}
+			match relevant_edge {
+				Some((equiv, reverse)) => write!(f, "{}: {} (from {} via {} {:?})\n", d, n.exp, backedge, equiv, reverse),
+				None => write!(f, "{}: {} (from {})\n", d, n.exp, backedge)
+			}
+		})
 	}
 }
 
