@@ -2,7 +2,7 @@ use crate::parser::Expression;
 
 const SUM_CONST: i32 = 1;
 const PRODUCT_CONST: i32 = 1;
-const VARIABLE_CONST: i32 = 2;
+const VARIABLE_CONST: i32 = 1;
 const CONSTANT_CONST: i32 = 1;
 
 pub fn measure(e: &Expression) -> i32 {

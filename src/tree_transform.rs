@@ -17,7 +17,14 @@ impl fmt::Display for Equivalence {
 	}
 }
 
-// ((0)*(4))+((1)*(0))
+// example:
+// x*0
+// x*(a+(-1)*a)
+// x*a + x*((-1)*a)
+// x*a + (x*(-1))*a
+// x*a + (-1)*(x*a)
+// 0
+
 
 pub fn get_transformations() -> Vec<Equivalence> {
 	let a = Expression::Variable("a".into());
@@ -64,18 +71,22 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			before: a.clone() + neg_one * a.clone(),
 			after: zero.clone()
 		},
-		// Equivalence {
-		// 	before: a.clone() * zero.clone(),
-		// 	after: a.clone()
-		// }
+		Equivalence {
+			before: a.clone() * zero.clone(),
+			after: zero.clone()
+		}
 	]
 }
 
+// Returns true if exp matches the pattern of match_exp.
 pub fn match_expression_variables<'a>(exp: &'a Expression, match_exp: &Expression, assignments: &mut HashMap<String, &'a Expression>)
 																	-> bool {
 	// exp = 1 + 2, match_exp = a + b, etc
 	match match_exp {
-		Expression::Variable(s) => { assignments.insert(s.clone(), exp); true},
+		Expression::Variable(s) => match assignments.get(s) {
+			Some(assignment) => (**assignment) == *exp,
+			None => {assignments.insert(s.clone(), exp); true}
+		},
 		Expression::Constant(c) => match exp { Expression::Constant(d) => c == d, _ => false},
 		Expression::Sum(a, b) =>
 			match exp {
