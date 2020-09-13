@@ -1,4 +1,4 @@
-use crate::{var, c, parser::{Expression}};
+use crate::{var, c, parser::{Expression, expression}};
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -31,79 +31,79 @@ pub fn get_transformations() -> Vec<Equivalence> {
 	vec![
 		// distributive
 		Equivalence {
-			before: var!("a") * (var!("b") + var!("c")),
-			after: var!("a") * var!("b") + var!("a") * var!("c"),
+			before: expression("a*(b+c)"),
+			after: expression("a*b+a*c"),
 			forwards_only: false,
 		},
 		// commutative
 		Equivalence {
-			before: var!("a") + var!("b"),
-			after: var!("b") + var!("a"),
+			before: expression("a+b"),
+			after: expression("b+a"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: var!("a") * var!("b"),
-			after: var!("b") * var!("a"),
+			before: expression("a*b"),
+			after: expression("b*a"),
 			forwards_only: false,
 		},
 		// associative
 		Equivalence {
-			before: var!("a") * (var!("b") * var!("c")),
-			after: (var!("a") * var!("b")) * var!("c"),
+			before: expression("a*(b*c)"),
+			after: expression("(a*b)*c"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: var!("a") + (var!("b") + var!("c")),
-			after: (var!("a") + var!("b")) + var!("c"),
+			before: expression("a+(b+c)"),
+			after: expression("(a+b)+c"),
 			forwards_only: false,
 		},
 		// identity
 		Equivalence {
-			before: c!(1) * var!("a"),
+			before: expression("1*a"),
 			after: var!("a"),
 			forwards_only: true,
 		},
 		Equivalence {
-			before: c!(0) + var!("a"),
+			before: expression("0+a"),
 			after: var!("a"),
 			forwards_only: true,
 		},
 		// inverse
 		Equivalence {
-			before: var!("a") + c!(-1) * var!("a"),
+			before: expression("a-a"),
 			after: c!(0),
 			forwards_only: true,
 		},
 		// complex ops
 		Equivalence {
-			before: var!("a") / var!("a"),
+			before: expression("a/a"),
 			after: c!(1),
 			forwards_only: true,
 		},
 		Equivalence {
-			before: var!("a") / var!("b"),
-			after: var!("a") * (var!("b") ^ c!(-1)),
+			before: expression("a/b"),
+			after: expression("a*b^(-1)"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: var!("a") - var!("b"),
-			after: var!("a") + c!(-1) * var!("b"),
+			before: expression("a-b"),
+			after: expression("a+(-1)*b"),
 			forwards_only: false,
 		},
 		Equivalence {
-			before: var!("a") ^ c!(2),
-			after: var!("a") * var!("a"),
+			before: expression("a^2"),
+			after: expression("a*a"),
 			forwards_only: false,
 		},
 		// misc simple
 		Equivalence {
-			before: var!("a") * c!(0),
+			before: expression("a*0"),
 			after: c!(0),
 			forwards_only: true,
 		},
 		Equivalence {
-			before: c!(2) * var!("a"),
-			after: var!("a") + var!("a"),
+			before: expression("2*a"),
+			after: expression("a+a"),
 			forwards_only: false,
 		},
 	]

@@ -195,3 +195,8 @@ fn parse_power(expr: &str) -> ParseResult {
   }
   Ok((s1, leftover))
 }
+
+// Use for expression literals when performance is not an issue.
+pub fn expression(e: &str) -> Expression {
+  parse(e).unwrap()
+}

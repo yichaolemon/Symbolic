@@ -94,6 +94,11 @@ mod tests {
 	}
 
 	#[test]
+	fn test_subtraction() -> Result<(), ParseError> {
+		assert_min_equivalent("2*a-a-c", "a-c")
+	}
+
+	#[test]
 	fn test_cannot_be_simplified() -> Result<(), ParseError> {
 		assert_min_equivalent("a+b+c*d", "a+b+c*d")
 	}
@@ -131,5 +136,11 @@ mod tests {
 	#[test]
 	fn test_long_factoring_and_cancellation() -> Result<(), ParseError> {
 		assert_min_equivalent("(a^2+a*b+a*b+b^2)/(a+b)", "a+b")
+	}
+
+	#[test]
+	#[ignore]  // Can't finish in a reasonable time.
+	fn test_longer_factoring_and_cancellation() -> Result<(), ParseError> {
+		assert_min_equivalent("(a^2+2*a*b+b^2)/(a+b)", "a+b")
 	}
 }
