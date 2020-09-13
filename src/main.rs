@@ -15,14 +15,14 @@ fn main() {
 			.read_line(&mut expr)
 			.expect("Failed to read expression");
 
-		let e = Rc::new(parser::parse(expr.trim()).unwrap());
-		println!("Parsed expression: {}", e);
+		let root_exp = Rc::new(parser::parse(expr.trim()).unwrap());
+		println!("Parsed expression: {}", root_exp);
 		// The graph takes ownership and persists `e`, but i can't figure out how to tell that to the compiler,
 		// so we need to clone it.
-		let mut graph = transformation_graph::create_graph(Rc::clone(&e));
+		let mut graph = transformation_graph::create_graph(Rc::clone(&root_exp));
 		let equivalences = tree_transform::get_transformations();
 		let mut to_transform = VecDeque::new();
-		to_transform.push_back(e);
+		to_transform.push_back(root_exp);
 		while !to_transform.is_empty() {
 			let e = to_transform.pop_front().unwrap();
 			for equivalence in equivalences.iter() {

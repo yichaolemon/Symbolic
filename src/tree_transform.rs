@@ -16,15 +16,17 @@ impl fmt::Display for Equivalence {
 	}
 }
 
-pub fn get_transformations() -> [Equivalence; 5] {
+pub fn get_transformations() -> [Equivalence; 8] {
 	let a = Expression::Variable("a".into());
 	let b = Expression::Variable("b".into());
 	let c = Expression::Variable("c".into());
 	[
+		// distributive
 		Equivalence {
 			before: a.clone() * (b.clone() + c.clone()),
 			after: a.clone() * b.clone() + a.clone() * c.clone()
 		},
+		// commutative
 		Equivalence {
 			before: a.clone() + b.clone(),
 			after: b.clone() + a.clone()
@@ -33,6 +35,7 @@ pub fn get_transformations() -> [Equivalence; 5] {
 			before: a.clone() * b.clone(),
 			after: b.clone() * a.clone()
 		},
+		// associative
 		Equivalence {
 			before: a.clone() * (b.clone() * c.clone()),
 			after: (a.clone() * b.clone()) * c.clone()
@@ -41,6 +44,20 @@ pub fn get_transformations() -> [Equivalence; 5] {
 			before: a.clone() + (b.clone() + c.clone()),
 			after: (a.clone() + b.clone()) + c.clone()
 		},
+		// identity
+		Equivalence {
+			before: Expression::Constant(1) * a.clone(),
+			after: a.clone()
+		},
+		Equivalence {
+			before: Expression::Constant(0) + a.clone(),
+			after: a.clone(),
+		},
+		// inverse
+		Equivalence {
+			before: a.clone() + Expression::Constant(-1) * a.clone(),
+			after: Expression::Constant(0)
+		}
 	]
 }
 

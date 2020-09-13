@@ -39,8 +39,6 @@ impl<'b> Graph<'b> {
 	// before is already in the graph
 	// if after is already in the graph, we still add the edges but return false.
 	pub fn add_node(&mut self, before: Rc<Expression>, after: Rc<Expression>, equiv: &'b Equivalence) -> bool {
-		let after_clone = after.as_ref().clone();
-
 		let node_before = self.map.get_mut(before.as_ref()).unwrap();
 		node_before.add_equiv_exp(Rc::clone(&after), equiv, true);
 
@@ -48,7 +46,7 @@ impl<'b> Graph<'b> {
 			Some(node_after) => (node_after, false),
 			None => {
 				let node_after = Node::new(Rc::clone(&after));
-				self.map.insert(after_clone, node_after);
+				self.map.insert(after.as_ref().clone(), node_after);
 				(self.map.get_mut(after.as_ref()).unwrap(), true)
 			},
 		};
@@ -66,9 +64,9 @@ impl<'b> Graph<'b> {
 			let node = self.map.get(exp.as_ref()).unwrap();
 			f(node)?;
 			for (equiv_exp, _, _) in node.equiv_exps.iter() {
-				if !visited_set.contains(equiv_exp.as_ref()) {
-					visited_set.insert(Rc::clone(&equiv_exp));
-					queue.push_back(Rc::clone(&equiv_exp));
+				if !visited_set.contains(equiv_exp) {
+					visited_set.insert(Rc::clone(equiv_exp));
+					queue.push_back(Rc::clone(equiv_exp));
 				}
 			}
 		};
