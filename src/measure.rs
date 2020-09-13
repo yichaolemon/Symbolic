@@ -94,8 +94,33 @@ mod tests {
 	}
 
 	#[test]
+	fn test_cannot_be_simplified() -> Result<(), ParseError> {
+		assert_min_equivalent("a+b+c*d", "a+b+c*d")
+	}
+
+	#[test]
 	fn test_division_cancel() -> Result<(), ParseError> {
 		assert_min_equivalent("(a*b)/a", "b")
+	}
+
+	#[test]
+	fn test_division_simpler_than_negative_power() -> Result<(), ParseError> {
+		assert_min_equivalent("b^(-1)*a", "a/b")
+	}
+
+	#[test]
+	fn test_quotient_of_sum() -> Result<(), ParseError> {
+		assert_min_equivalent("(a+b)/a", "1+b/a")
+	}
+
+	#[test]
+	fn test_factoring() -> Result<(), ParseError> {
+		assert_min_equivalent("(a^2+a*b)/a", "a+b")
+	}
+
+	#[test]
+	fn test_fraction_cancel() -> Result<(), ParseError> {
+		assert_min_equivalent("(a/b)*(c*b/a)", "c")
 	}
 
 	#[test]
@@ -104,7 +129,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_factoring() -> Result<(), ParseError> {
+	fn test_long_factoring_and_cancellation() -> Result<(), ParseError> {
 		assert_min_equivalent("(a^2+a*b+a*b+b^2)/(a+b)", "a+b")
 	}
 }
