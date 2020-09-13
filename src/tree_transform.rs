@@ -101,6 +101,11 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			after: c!(0),
 			forwards_only: true,
 		},
+		Equivalence {
+			before: c!(2) * var!("a"),
+			after: var!("a") + var!("a"),
+			forwards_only: false,
+		},
 	]
 }
 

@@ -69,6 +69,12 @@ pub fn find_min_equivalent_expr(e: Expression) -> Expression {
 mod tests {
 	use super::*;
 
+	#[test]
+	fn test_multiply_by_zero_expression() {
+		// Test with expression constructors.
+		assert_eq!(find_min_equivalent_expr(var!("x") * c!(0)), c!(0));
+	}
+
 	fn assert_min_equivalent(e: &str, min: &str) -> Result<(), ParseError> {
 		let e = parse(e)?;
 		let min = parse(min)?;
@@ -78,10 +84,13 @@ mod tests {
 
 	#[test]
 	fn test_multiply_by_zero() -> Result<(), ParseError> {
-		// Test with expression constructors.
-		assert_eq!(find_min_equivalent_expr(var!("x") * c!(0)), c!(0));
 		// Test with parsing.
 		assert_min_equivalent("x*0", "0")
+	}
+
+	#[test]
+	fn test_multiply_by_two() -> Result<(), ParseError> {
+		assert_min_equivalent("a*b+a*b", "2*(a*b)")
 	}
 
 	#[test]
