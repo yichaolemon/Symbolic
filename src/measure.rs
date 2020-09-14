@@ -172,4 +172,10 @@ mod tests {
 	fn test_longer_factoring_and_cancellation() -> Result<(), ParseError> {
 		assert_min_equivalent("(a^2+2*a*b+b^2)/(a+b)", "a+b")
 	}
+
+	#[test]
+	#[ignored]
+	fn test_longer_factoring_and_cancellation() -> Result<(), ParseError> {
+		assert_min_equivalent("(a^2-b^2)/(a-b)", "a+b")
+	}
 }
