@@ -41,6 +41,11 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			after: expression("a*b+a*c"),
 			..Default::default()
 		},
+		Equivalence {
+			before: expression("(a*b)^c"),
+			after: expression("a^c*b^c"),
+			..Default::default()
+		},
 		// commutative
 		Equivalence {
 			before: expression("a+b"),
@@ -64,12 +69,7 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			..Default::default()
 		},
 		// identity
-		Equivalence {
-			before: expression("1*a"),
-			after: var!("a"),
-			forwards_only: true,
-			..Default::default()
-		},
+		// multiplicative identity handled by split_repeated_operation
 		Equivalence {
 			before: expression("0+a"),
 			after: var!("a"),
@@ -85,14 +85,18 @@ pub fn get_transformations() -> Vec<Equivalence> {
 		},
 		// complex ops
 		Equivalence {
-			before: expression("a/a"),
-			after: c!(1),
-			forwards_only: true,
+			before: expression("a/b"),
+			after: expression("a*b^(-1)"),
 			..Default::default()
 		},
 		Equivalence {
-			before: expression("a/b"),
-			after: expression("a*b^(-1)"),
+			before: expression("a^b*a^c"),
+			after: expression("a^(b+c)"),
+			..Default::default()
+		},
+		Equivalence {
+			before: expression("a^b^c"),
+			after: expression("a^(b*c)"),
 			..Default::default()
 		},
 		Equivalence {
@@ -107,6 +111,12 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			forwards_only: true,
 			..Default::default()
 		},
+		Equivalence {
+			before: expression("a^1"),
+			after: expression("a"),
+			forwards_only: true,
+			..Default::default()
+		},
 		// simplify expressions with only constants by evaluation
 		Equivalence {
 			method: Some(Box::new(move |exp| exp.eval_const())),
@@ -114,60 +124,72 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			..Default::default()
 		},
 		Equivalence {
-			method: Some(Box::new(move |exp| split_repeated_operation(exp))),
-			method_name: "split_repeated_op".into(),
+			method: Some(Box::new(move |exp| multiplicative_inverse(exp))),
+			method_name: "multiplicative_inverse".into(),
 			..Default::default()
-		},
+		}
+		// Equivalence {
+		// 	method: Some(Box::new(move |exp| split_repeated_operation(exp))),
+		// 	method_name: "split_repeated_op".into(),
+		// 	..Default::default()
+		// },
 	]
 }
 
-fn split_repeated_operation(exp: &Expression) -> Option<Expression> {
+// a^0 is 1, and a/a is 1, unless a is a constant zero
+fn multiplicative_inverse(exp: &Expression) -> Option<Expression> {
 	match exp {
-		// a*2 = a+a
-		Expression::Product(a, b) => {
-			let c = a.unwrap_constant()?;
-			if c == 0 { return Some(c!(0))}
-			if c < -1 {
-				let mut e = c!(-1) * b.deref().clone();
-				for _ in 0..(-c-1) {
-					e = e + c!(-1) * b.deref().clone();
-				}
-				return Some(e)
-			}
-			if c > 1 {
-				let mut e = b.deref().clone();
-				for _ in 0..(c-1) {
-					e = e + b.deref().clone();
-				}
-				return Some(e)
-			}
-			None
-		},
-
-		// a^2 = a*a
 		Expression::Power(a, b) => {
-			let d = b.unwrap_constant()?;
-			if d == 0 { return Some(c!(1)) }
-			if d < -1 {
-				let mut e = b.deref().clone() ^ c!(-1);
-				for _ in 0..(-d-1) {
-					e = e * b.deref().clone() ^ c!(-1);
-				}
-				return Some(e)
+			if b.unwrap_constant()? == 0 && a.eval_const() != Some(Expression::Constant(0)) {
+				return Some(c!(1))
 			}
-			if d > 1 {
-				let mut e = b.deref().clone();
-				for _ in 0..(d -1) {
-					e = e * b.deref().clone();
-				}
-				return Some(e)
+		}
+		Expression::Quotient(a, b) => {
+			if a == b && a.eval_const() != Some(Expression::Constant(0)) {
+				return Some(c!(1))
 			}
-			None
-		},
-
-		_ => None
-	}
+		}
+		_ => ()
+	};
+	None
 }
+
+// // Turn a*a into a^2
+// fn group_repeated_operation(exp: &Expression) -> Option<Expression> {
+// 	match exp {
+// 		// 2*a = a+a
+// 		// 6*a = a+5*a
+// 		Expression::Product(a, b) => {
+// 			let c = a.unwrap_constant()?;
+// 			if c == 0 { Some(c!(0)) }
+// 			else if c < -1 {
+// 				Some(c!(-1) * b.deref().clone() + c!(c+1) * b.deref().clone())
+// 			} else if c == 1 {
+// 				Some(b.deref().clone())
+// 			} else if c > 1 {
+// 				Some(b.deref().clone() + c!(c-1) * b.deref().clone())
+// 			}
+// 			else { None }
+// 		},
+//
+// 		// a^2 = a*a
+// 		// a^3 = a^2*a
+// 		Expression::Power(a, b) => {
+// 			let d = b.unwrap_constant()?;
+// 			if d == 0 { Some(c!(1)) }
+// 			else if d < -1 {
+// 				Some(a.deref().clone() ^ c!(-1) * a.deref().clone() ^ c!(c+1))
+// 			} else if d == 1 {
+// 				Some(a.deref().clone())
+// 			} else if d > 1 {
+// 				Some(a.deref().clone * a.deref().clone() ^ c!(c-1))
+// 			}
+// 			else { None }
+// 		},
+//
+// 		_ => None
+// 	}
+// }
 
 // Returns true if exp matches the pattern of match_exp.
 pub fn match_expression_variables<'a>(exp: &'a Expression, match_exp: &Expression, assignments: &mut HashMap<String, &'a Expression>)

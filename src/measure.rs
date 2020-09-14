@@ -139,6 +139,12 @@ mod tests {
 	}
 
 	#[test]
+	fn test_split_repeated() -> Result<(), ParseError> {
+		assert_min_equivalent("a^2/a", "a")?;
+		assert_min_equivalent("a^3/a^2", "a")
+	}
+
+	#[test]
 	#[ignore]  // Can't finish in a reasonable time.
 	fn test_long_factoring_and_cancellation() -> Result<(), ParseError> {
 		assert_min_equivalent("(a^2+a*b+a*b+b^2)/(a+b)", "a+b")
