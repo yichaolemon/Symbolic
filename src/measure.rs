@@ -42,7 +42,7 @@ pub fn find_min_equivalent_expr(e: Expression) -> Expression {
 	while !to_transform.is_empty() {
 		let (e, depth) = to_transform.pop_front().unwrap();
 		if depth > prev_depth {
-			println!("Reached depth {} of transformations", depth);
+			println!("Reached depth {} of transformations, with graph size {}", depth, graph.size());
 			prev_depth = depth;
 		}
 		for equivalence in equivalences.iter() {
@@ -169,7 +169,6 @@ mod tests {
 	}
 
 	#[test]
-	#[ignore]  // Can't finish in a reasonable time.
 	fn test_longer_factoring_and_cancellation() -> Result<(), ParseError> {
 		assert_min_equivalent("(a^2+2*a*b+b^2)/(a+b)", "a+b")
 	}

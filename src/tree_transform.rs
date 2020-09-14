@@ -84,6 +84,12 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			after: expression("a+(-1)*b"),
 			..Default::default()
 		},
+		// complex rules. yes it's cheating, but it's all good. lol.
+		Equivalence {
+			before: expression("a^2+2*a*b+b^2"),
+			after: expression("(a+b)^2"),
+			..Default::default()
+		},
 		// simplify expressions with only constants by evaluation
 		Equivalence {
 			method: Some(Box::new(move |exp| exp.eval_const())),
@@ -95,11 +101,16 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			method_name: "group_repeated".into(),
 			..Default::default()
 		},
+		// Equivalence {
+		// 	method: Some(Box::new(move |exp| split_constants(exp))),
+		// 	method_name: "split_constants".into(),
+		// 	..Default::default()
+		// },
 		Equivalence {
-			method: Some(Box::new(move |exp| split_constants(exp))),
-			method_name: "split_constants".into(),
+			method: Some(Box::new(move |exp| split_repeated_operation(exp))),
+			method_name: "split_repeated_operation".into(),
 			..Default::default()
-		},
+		}
 	]
 }
 
@@ -114,6 +125,12 @@ pub fn get_simple_transformations() -> Vec<Equivalence> {
 		// identity
 		Equivalence {
 			before: expression("0+a"),
+			after: var!("a"),
+			forwards_only: true,
+			..Default::default()
+		},
+		Equivalence {
+			before: expression("a+0"),
 			after: var!("a"),
 			forwards_only: true,
 			..Default::default()
@@ -145,6 +162,18 @@ pub fn get_simple_transformations() -> Vec<Equivalence> {
 			..Default::default()
 		},
 		Equivalence {
+			before: expression("a*1"),
+			after: expression("a"),
+			forwards_only: true,
+			..Default::default()
+		},
+		Equivalence {
+			before: expression("1*a"),
+			after: expression("a"),
+			forwards_only: true,
+			..Default::default()
+		},
+		Equivalence {
 			method: Some(Box::new(move |exp| multiplicative_inverse(exp))),
 			method_name: "multiplicative_inverse".into(),
 			forwards_only: true,
@@ -165,7 +194,6 @@ fn split_constants(exp: &Expression) -> Option<Expression> {
 }
 
 // a^0 => 1, a/a => 1, unless a is a constant zero
-// a*1 => a
 fn multiplicative_inverse(exp: &Expression) -> Option<Expression> {
 	match exp {
 		Expression::Power(a, b) => {
@@ -178,11 +206,6 @@ fn multiplicative_inverse(exp: &Expression) -> Option<Expression> {
 				return Some(c!(1))
 			}
 		},
-		Expression::Product(a, b) => {
-			if b.unwrap_constant()? == 1 {
-				return Some(a.deref().clone())
-			}
-		}
 		_ => ()
 	};
 	None
@@ -377,6 +400,54 @@ pub fn transform(exp: &Expression, equiv: &Equivalence) -> Vec<Expression> {
 	}
 
 	transformed
+}
+
+fn split_repeated_operation(exp: &Expression) -> Option<Expression> {
+	match exp {
+		// 2*a = a+a
+		Expression::Product(a, b) => {
+			let c = a.unwrap_constant()?;
+			if c == 0 { return Some(c!(0))}
+			if c < -1 {
+				let mut e = c!(-1) * b.deref().clone();
+				for _ in 0..(-c-1) {
+					e = e + c!(-1) * b.deref().clone();
+				}
+				return Some(e)
+			}
+			if c > 1 {
+				let mut e = b.deref().clone();
+				for _ in 0..(c-1) {
+					e = e + b.deref().clone();
+				}
+				return Some(e)
+			}
+			None
+		},
+
+		// a^2 = a*a
+		Expression::Power(a, b) => {
+			let d = b.unwrap_constant()?;
+			if d == 0 { return Some(c!(1)) }
+			if d < -1 {
+				let mut e = a.deref().clone() ^ c!(-1);
+				for _ in 0..(-d-1) {
+					e = e * a.deref().clone() ^ c!(-1);
+				}
+				return Some(e)
+			}
+			if d > 1 {
+				let mut e = a.deref().clone();
+				for _ in 0..(d -1) {
+					e = e * a.deref().clone();
+				}
+				return Some(e)
+			}
+			None
+		},
+
+		_ => None
+	}
 }
 
 pub fn simplify_via_forward_transform(exp: Expression, transforms: &Vec<Equivalence>) -> Expression {

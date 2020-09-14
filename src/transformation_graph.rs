@@ -72,6 +72,10 @@ impl<'b> Graph<'b> {
 		};
 		Ok(())
 	}
+
+	pub fn size(&self) -> usize {
+		self.map.len()
+	}
 }
 
 impl fmt::Display for Graph<'_> {

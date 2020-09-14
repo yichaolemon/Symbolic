@@ -4,6 +4,7 @@ mod transformation_graph;
 mod measure;
 
 use std::io;
+use std::time::Instant;
 
 fn main() {
 	loop {
@@ -14,7 +15,9 @@ fn main() {
 			.read_line(&mut expr)
 			.expect("Failed to read expression");
 
+		let now = Instant::now();
 		let root_exp = parser::parse(expr.trim()).unwrap();
 		measure::find_min_equivalent_expr(root_exp);
+		println!("Elapsed time {}s", now.elapsed().as_secs());
 	}
 }
