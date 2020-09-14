@@ -127,6 +127,11 @@ pub fn get_transformations() -> Vec<Equivalence> {
 			method: Some(Box::new(move |exp| multiplicative_inverse(exp))),
 			method_name: "multiplicative_inverse".into(),
 			..Default::default()
+		},
+		Equivalence {
+			method: Some(Box::new(move |exp| group_repeated_operation(exp))),
+			method_name: "group_repeated".into(),
+			..Default::default()
 		}
 		// Equivalence {
 		// 	method: Some(Box::new(move |exp| split_repeated_operation(exp))),
@@ -154,42 +159,38 @@ fn multiplicative_inverse(exp: &Expression) -> Option<Expression> {
 	None
 }
 
-// // Turn a*a into a^2
-// fn group_repeated_operation(exp: &Expression) -> Option<Expression> {
-// 	match exp {
-// 		// 2*a = a+a
-// 		// 6*a = a+5*a
-// 		Expression::Product(a, b) => {
-// 			let c = a.unwrap_constant()?;
-// 			if c == 0 { Some(c!(0)) }
-// 			else if c < -1 {
-// 				Some(c!(-1) * b.deref().clone() + c!(c+1) * b.deref().clone())
-// 			} else if c == 1 {
-// 				Some(b.deref().clone())
-// 			} else if c > 1 {
-// 				Some(b.deref().clone() + c!(c-1) * b.deref().clone())
-// 			}
-// 			else { None }
-// 		},
-//
-// 		// a^2 = a*a
-// 		// a^3 = a^2*a
-// 		Expression::Power(a, b) => {
-// 			let d = b.unwrap_constant()?;
-// 			if d == 0 { Some(c!(1)) }
-// 			else if d < -1 {
-// 				Some(a.deref().clone() ^ c!(-1) * a.deref().clone() ^ c!(c+1))
-// 			} else if d == 1 {
-// 				Some(a.deref().clone())
-// 			} else if d > 1 {
-// 				Some(a.deref().clone * a.deref().clone() ^ c!(c-1))
-// 			}
-// 			else { None }
-// 		},
-//
-// 		_ => None
-// 	}
-// }
+fn group_repeated_operation(exp: &Expression) -> Option<Expression> {
+	match exp {
+		// a*a => a^2
+		// a*a^2 => a^3
+		Expression::Product(a, b) => {
+			if a == b { return Some(a.deref().clone() ^ c!(2)) }
+			match b.deref() {
+				Expression::Power(c, d) => {
+					let d_const = d.unwrap_constant()?;
+					if c == a { return Some(a.deref().clone() ^ (c!(d_const+1))) }
+				},
+				_ => ()
+			}
+		},
+
+		// a+a => 2*a
+		// a+2*a => 3*a
+		Expression::Sum(a, b) => {
+			if a == b { return Some(c!(2) * a.deref().clone()) }
+			match b.deref() {
+				Expression::Product(c, d) => {
+					let c_const = c.unwrap_constant()?;
+					if d == a { return Some(c!(c_const+1) * a.deref().clone()) }
+				},
+				_ => ()
+			}
+		},
+
+		_ => ()
+	}
+	None
+}
 
 // Returns true if exp matches the pattern of match_exp.
 pub fn match_expression_variables<'a>(exp: &'a Expression, match_exp: &Expression, assignments: &mut HashMap<String, &'a Expression>)
