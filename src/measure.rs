@@ -2,6 +2,7 @@ use crate::{var, c, parser::{Expression, parse, ParseError}};
 use crate::{transformation_graph, tree_transform};
 use std::rc::Rc;
 use std::collections::VecDeque;
+use crate::tree_transform::simplify_via_forward_transform;
 
 const MEASURE_PER_HEIGHT: i32 = 1;
 const VARIABLE_CONST: i32 = 2;
@@ -34,6 +35,7 @@ pub fn find_min_equivalent_expr(e: Expression) -> Expression {
 	// so we need to clone it.
 	let mut graph = transformation_graph::create_graph(Rc::clone(&root_exp));
 	let equivalences = tree_transform::get_transformations();
+	let simple_equivalences = tree_transform::get_simple_transformations();
 	let mut to_transform = VecDeque::new();
 	to_transform.push_back((Rc::clone(&root_exp), 0));
 	let mut prev_depth = 0;
@@ -45,6 +47,7 @@ pub fn find_min_equivalent_expr(e: Expression) -> Expression {
 		}
 		for equivalence in equivalences.iter() {
 			for transformed in tree_transform::transform(e.as_ref(), equivalence).into_iter() {
+				let transformed = simplify_via_forward_transform(transformed, &simple_equivalences);
 				// measure transformed to make sure it does not stray too far from root_exp
 				let transformed_measure = measure(&transformed);
 				let transformed = Rc::new(transformed);
@@ -55,6 +58,7 @@ pub fn find_min_equivalent_expr(e: Expression) -> Expression {
 					min_exp_depth = depth+1;
 				}
 				if graph.add_node(Rc::clone(&e), Rc::clone(&transformed), equivalence) {
+					// println!("{}: {} transformed by {} becomes {}", depth+1, e, equivalence, transformed);
 					to_transform.push_back((transformed, depth+1));
 				}
 			}
@@ -145,7 +149,21 @@ mod tests {
 	}
 
 	#[test]
-	#[ignore]  // Can't finish in a reasonable time.
+	fn test_group_repeated_exp() -> Result<(), ParseError> {
+		assert_min_equivalent("a*a*a*a^2", "a^5")
+	}
+
+	#[test]
+	fn test_basic_factor() -> Result<(), ParseError> {
+		assert_min_equivalent("a^2+a*b", "a*(a+b)")
+	}
+
+	#[test]
+	fn test_group_repeated_mul() -> Result<(), ParseError> {
+		assert_min_equivalent("a+a+3*a", "5*a")
+	}
+
+	#[test]
 	fn test_long_factoring_and_cancellation() -> Result<(), ParseError> {
 		assert_min_equivalent("(a^2+a*b+a*b+b^2)/(a+b)", "a+b")
 	}
